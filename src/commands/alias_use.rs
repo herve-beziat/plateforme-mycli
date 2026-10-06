@@ -1,6 +1,6 @@
 //! `mys3 alias use`: switch the default alias.
-//! Not implemented yet (issue #16).
 
+use crate::config::Config;
 use crate::error::MyS3Error;
 
 /// Arguments of the `alias use` command.
@@ -11,6 +11,10 @@ pub struct Args {
 }
 
 /// Runs the `alias use` command.
-pub fn run(_args: Args) -> Result<(), MyS3Error> {
-    Err(MyS3Error::NotImplemented("alias use"))
+pub fn run(args: Args) -> Result<(), MyS3Error> {
+    let mut config = Config::load()?;
+    config.set_default(&args.alias_name)?;
+    config.save()?;
+    println!("Default alias set to '{}'.", args.alias_name);
+    Ok(())
 }

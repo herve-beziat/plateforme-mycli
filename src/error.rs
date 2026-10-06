@@ -38,6 +38,10 @@ pub enum MyS3Error {
     #[error("invalid configuration file '{0}': {1}")]
     InvalidConfig(String, serde_json::Error),
 
+    /// The URL of an alias is not `http(s)://host[:port]`.
+    #[error("invalid server URL '{0}' (expected http://host[:port] or https://host[:port])")]
+    InvalidUrl(String),
+
     #[error("bucket '{0}' not found")]
     BucketNotFound(String),
 

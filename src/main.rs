@@ -3,6 +3,8 @@
 
 mod cli;
 mod commands;
+#[allow(dead_code)] // used by the commands (#15 onwards)
+mod config;
 mod error;
 #[allow(dead_code)] // used by the HTTP client (#13)
 mod signer;

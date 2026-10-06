@@ -4,6 +4,8 @@
 mod cli;
 mod commands;
 mod error;
+#[allow(dead_code)] // used by the HTTP client (#13)
+mod signer;
 
 use std::process::ExitCode;
 

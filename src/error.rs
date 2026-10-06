@@ -25,6 +25,23 @@ pub enum MyS3Error {
     #[error("no default alias set (run `mys3 alias set` or `mys3 alias use`)")]
     NoDefaultAlias,
 
+    /// The home directory, where `.mys3/config.json` lives, cannot be found.
+    #[error("cannot find the home directory")]
+    HomeNotFound,
+
+    #[error("cannot read configuration file '{0}': {1}")]
+    ConfigRead(String, std::io::Error),
+
+    #[error("cannot write configuration file '{0}': {1}")]
+    ConfigWrite(String, std::io::Error),
+
+    #[error("invalid configuration file '{0}': {1}")]
+    InvalidConfig(String, serde_json::Error),
+
+    /// The URL of an alias is not `http(s)://host[:port]`.
+    #[error("invalid server URL '{0}' (expected http://host[:port] or https://host[:port])")]
+    InvalidUrl(String),
+
     #[error("bucket '{0}' not found")]
     BucketNotFound(String),
 

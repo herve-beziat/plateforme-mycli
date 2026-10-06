@@ -1,22 +1,60 @@
+//! Entry point of `mys3`: parses the command line, runs the matching command
+//! and turns any error into a message on stderr with exit code 1.
+
+mod cli;
+mod commands;
+mod error;
+
+use std::process::ExitCode;
+
 use clap::Parser;
 
-/// Simple program to greet a person
-#[derive(Parser, Debug)]
-#[command(version, about, long_about = None)]
-struct Args {
-    /// Name of the person to greet
-    #[arg(short, long)]
-    name: String,
+use cli::{AliasCommand, Cli, Command};
+use error::MyS3Error;
 
-    /// Number of times to greet
-    #[arg(short, long, default_value_t = 1)]
-    count: u8,
+fn main() -> ExitCode {
+    let cli = match Cli::try_parse() {
+        Ok(cli) => cli,
+        Err(err) => {
+            // Help and version go to stdout (success); usage errors go to stderr.
+            let _ = err.print();
+            return if err.use_stderr() {
+                ExitCode::from(1)
+            } else {
+                ExitCode::SUCCESS
+            };
+        }
+    };
+
+    match run(cli) {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(err) => {
+            eprintln!("Error: {err}");
+            ExitCode::from(1)
+        }
+    }
 }
 
-fn main() {
-    let args = Args::parse();
-
-    for _ in 0..args.count {
-        println!("Hello {}!", args.name);
+/// Calls the handler of the command given on the command line.
+fn run(cli: Cli) -> Result<(), MyS3Error> {
+    match cli.command {
+        Command::ListBuckets(args) => commands::list_buckets::run(args),
+        Command::CreateBucket(args) => commands::create_bucket::run(args),
+        Command::DeleteBucket(args) => commands::delete_bucket::run(args),
+        Command::BucketInfo(args) => commands::bucket_info::run(args),
+        Command::UploadFile(args) => commands::upload_file::run(args),
+        Command::ListObjects(args) => commands::list_objects::run(args),
+        Command::DownloadFile(args) => commands::download_file::run(args),
+        Command::DeleteFile(args) => commands::delete_file::run(args),
+        Command::ObjectInfo(args) => commands::object_info::run(args),
+        Command::CopyFile(args) => commands::copy_file::run(args),
+        Command::MoveFile(args) => commands::move_file::run(args),
+        Command::Sync(args) => commands::sync::run(args),
+        Command::Alias(alias) => match alias {
+            AliasCommand::Set(args) => commands::alias_set::run(args),
+            AliasCommand::Use(args) => commands::alias_use::run(args),
+            AliasCommand::List(args) => commands::alias_list::run(args),
+            AliasCommand::Remove(args) => commands::alias_remove::run(args),
+        },
     }
 }

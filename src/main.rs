@@ -1,21 +1,13 @@
 //! Entry point of `mys3`: parses the command line, runs the matching command
 //! and turns any error into a message on stderr with exit code 1.
 
-mod cli;
-#[allow(dead_code)] // used by the commands (#19 onwards)
-mod client;
-mod commands;
-#[allow(dead_code)] // used by the commands (#15 onwards)
-mod config;
-mod error;
-mod signer;
-
 use std::process::ExitCode;
 
 use clap::Parser;
 
-use cli::{AliasCommand, Cli, Command};
-use error::MyS3Error;
+use mys3::cli::{AliasCommand, Cli, Command};
+use mys3::commands;
+use mys3::error::MyS3Error;
 
 fn main() -> ExitCode {
     let cli = match Cli::try_parse() {

@@ -101,8 +101,12 @@ impl S3Client {
             builder = builder.header(name, value);
         }
         let invalid = |_| MyS3Error::InvalidUrl(url.clone());
-        // ureq refuses a body on GET, HEAD and DELETE, even an empty one.
-        let result = if body.is_empty() {
+        // ureq refuses a body on GET, HEAD and DELETE, even an empty one. On PUT
+        // and POST an empty body is still sent, as `Content-Length: 0`: without
+        // it ureq sends a chunked request, which MinIO refuses when creating a
+        // bucket (`400 MalformedXML`).
+        let without_body = body.is_empty() && !matches!(method, "PUT" | "POST");
+        let result = if without_body {
             self.agent.run(builder.body(()).map_err(invalid)?)
         } else {
             self.agent.run(builder.body(body).map_err(invalid)?)

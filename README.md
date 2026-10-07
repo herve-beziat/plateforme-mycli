@@ -86,47 +86,61 @@ The compiled binary is located at `target/release/mys3`. You can also execute it
 
 Every command supports `--help` (or `-h`) to view usage details and available flags.
 
+Rules shared by the commands:
+
+- Commands that talk to a server accept `--alias <ALIAS>`. Without it, the default alias is used.
+- `--output <text|JSON>`, where available, selects human-readable text (default) or JSON.
+- Destructive commands ask for a confirmation. `--force` (or `-f`) skips it.
+- Errors are printed on `stderr` and the exit code is `1`.
+
 ### 1. Alias Commands
 
 #### `alias set`
-Saves or updates connection credentials for a given S3 endpoint.
+Creates or updates an alias: a server URL and its keys saved under a name. The first alias created becomes the default one.
 
-- **Syntax**: `mys3 alias set <ALIAS_NAME> --endpoint <URL> --access-key <KEY> --secret-key <SECRET>`
-- **Options**:
-  - `<ALIAS_NAME>`: Unique name for this configuration profile.
-  - `--endpoint`, `-e`: Base URL of the S3 service (e.g., `http://localhost:9000`).
-  - `--access-key`, `-a`: S3 access key / username.
-  - `--secret-key`, `-s`: S3 secret key / password.
+- **Syntax**: `mys3 alias set <ALIAS_NAME> <URL> <ACCESS_KEY> [SECRET_KEY] [OPTIONS]`
+- **Arguments and options**:
+  - `<ALIAS_NAME>`: Name of the alias.
+  - `<URL>`: URL of the server (e.g., `http://localhost:9000`).
+  - `<ACCESS_KEY>`: S3 access key / username.
+  - `[SECRET_KEY]`: S3 secret key / password. When omitted, it is asked with hidden input.
+  - `--default`: *(Optional)* Make this alias the default one.
+  - `--region <REGION>`: *(Optional)* Region of the server (default: `us-east-1`).
 - **Example**:
   ```bash
-  mys3 alias set local \
-    --endpoint http://localhost:9000 \
-    --access-key admin \
-    --secret-key admin12345
+  mys3 alias set local http://localhost:9000 admin admin12345
+  mys3 alias set prod https://s3.example.com my-access-key --default --region eu-west-1
   ```
 
 #### `alias list`
-Displays all configured aliases, their endpoints, and indicates which alias is currently active.
+Displays all configured aliases with their URL and region, and indicates which one is the default. Keys are never displayed.
 
-- **Syntax**: `mys3 alias list`
+- **Syntax**: `mys3 alias list [OPTIONS]`
+- **Arguments and options**:
+  - `--output <text|JSON>`: *(Optional)* Output format.
 - **Example**:
   ```bash
   mys3 alias list
   ```
 
 #### `alias use`
-Sets the active alias used by default for all commands.
+Sets the alias used by default for all commands.
 
 - **Syntax**: `mys3 alias use <ALIAS_NAME>`
+- **Arguments and options**:
+  - `<ALIAS_NAME>`: Name of an existing alias.
 - **Example**:
   ```bash
   mys3 alias use local
   ```
 
 #### `alias remove`
-Deletes a saved alias profile.
+Deletes a saved alias. If it was the default one, there is no default alias until `alias use` is run.
 
-- **Syntax**: `mys3 alias remove <ALIAS_NAME>`
+- **Syntax**: `mys3 alias remove <ALIAS_NAME> [OPTIONS]`
+- **Arguments and options**:
+  - `<ALIAS_NAME>`: Name of the alias to delete.
+  - `--force`, `-f`: *(Optional)* Skip the confirmation.
 - **Example**:
   ```bash
   mys3 alias remove local
@@ -137,50 +151,57 @@ Deletes a saved alias profile.
 ### 2. Bucket Commands
 
 #### `list-buckets`
-Lists all buckets available on the current S3 server.
+Lists all buckets available on the server. A server without buckets is not an error.
 
 - **Syntax**: `mys3 list-buckets [OPTIONS]`
-- **Options**:
-  - `--alias`: *(Optional)* Run against a specific alias instead of the default.
+- **Arguments and options**:
+  - `--alias <ALIAS>`: *(Optional)* Run against a specific alias instead of the default.
+  - `--output <text|JSON>`: *(Optional)* Output format.
 - **Example**:
   ```bash
   mys3 list-buckets
+  mys3 list-buckets --alias prod --output JSON
   ```
 
 #### `create-bucket`
-Creates a new S3 bucket.
+Creates a new bucket.
 
 - **Syntax**: `mys3 create-bucket <BUCKET_NAME> [OPTIONS]`
-- **Options**:
+- **Arguments and options**:
   - `<BUCKET_NAME>`: Name of the bucket to create (must adhere to S3 naming conventions).
-  - `--alias`: *(Optional)* Run against a specific alias.
+  - `--alias <ALIAS>`: *(Optional)* Run against a specific alias.
+  - `--region <REGION>`: *(Optional)* Region of the bucket.
 - **Example**:
   ```bash
   mys3 create-bucket my-bucket
   ```
 
 #### `bucket-info`
-Displays metadata and statistics for a bucket (creation date, object count, total size).
+Displays the details of a bucket: name, creation date, object count and total size.
 
 - **Syntax**: `mys3 bucket-info <BUCKET_NAME> [OPTIONS]`
-- **Options**:
+- **Arguments and options**:
   - `<BUCKET_NAME>`: Target bucket name.
-  - `--alias`: *(Optional)* Run against a specific alias.
+  - `--alias <ALIAS>`: *(Optional)* Run against a specific alias.
+  - `--output <text|JSON>`: *(Optional)* Output format.
 - **Example**:
   ```bash
   mys3 bucket-info my-bucket
   ```
 
 #### `delete-bucket`
-Deletes an existing bucket. Note: The bucket must be empty before deletion.
+Deletes a bucket, after a confirmation. A bucket that still contains objects is refused unless `--recursive` is given.
 
 - **Syntax**: `mys3 delete-bucket <BUCKET_NAME> [OPTIONS]`
-- **Options**:
-  - `<BUCKET_NAME>`: Target bucket to remove.
-  - `--alias`: *(Optional)* Run against a specific alias.
+- **Arguments and options**:
+  - `<BUCKET_NAME>`: Bucket to delete.
+  - `--alias <ALIAS>`: *(Optional)* Run against a specific alias.
+  - `--force`, `-f`: *(Optional)* Skip the confirmation.
+  - `--recursive`: *(Optional)* Delete the objects of the bucket first.
 - **Example**:
   ```bash
   mys3 delete-bucket my-bucket
+  mys3 delete-bucket my-bucket --recursive --force
   ```
 
 ---
@@ -188,28 +209,30 @@ Deletes an existing bucket. Note: The bucket must be empty before deletion.
 ### 3. Object Commands
 
 #### `upload-file`
-Uploads a local file to a bucket.
+Uploads a local file to a bucket. An object that already exists is not replaced unless `--overwrite` is given.
 
-- **Syntax**: `mys3 upload-file <BUCKET_NAME> <LOCAL_PATH> [OPTIONS]`
-- **Options**:
+- **Syntax**: `mys3 upload-file <FILE_PATH> <BUCKET_NAME> [OPTIONS]`
+- **Arguments and options**:
+  - `<FILE_PATH>`: Path of the local file to upload.
   - `<BUCKET_NAME>`: Destination bucket name.
-  - `<LOCAL_PATH>`: Path to local file on disk.
-  - `--key`, `-k`: *(Optional)* Custom object key in S3 (defaults to local file name).
-  - `--alias`: *(Optional)* Run against a specific alias.
+  - `--alias <ALIAS>`: *(Optional)* Run against a specific alias.
+  - `--key <KEY>`: *(Optional)* Object key in the bucket (defaults to the file name).
+  - `--overwrite`: *(Optional)* Replace the object if it already exists.
 - **Example**:
   ```bash
-  mys3 upload-file my-bucket ./report.pdf
-  mys3 upload-file my-bucket ./report.pdf --key archive/2026-report.pdf
+  mys3 upload-file ./report.pdf my-bucket
+  mys3 upload-file ./report.pdf my-bucket --key archive/2026-report.pdf
   ```
 
 #### `list-objects`
-Lists objects stored inside a bucket.
+Lists the objects stored in a bucket.
 
 - **Syntax**: `mys3 list-objects <BUCKET_NAME> [OPTIONS]`
-- **Options**:
+- **Arguments and options**:
   - `<BUCKET_NAME>`: Bucket to query.
-  - `--prefix`, `-p`: *(Optional)* Filter objects starting with a specific prefix/folder path.
-  - `--alias`: *(Optional)* Run against a specific alias.
+  - `--alias <ALIAS>`: *(Optional)* Run against a specific alias.
+  - `--prefix <PREFIX>`: *(Optional)* Only list the keys starting with this prefix.
+  - `--output <text|JSON>`: *(Optional)* Output format.
 - **Example**:
   ```bash
   mys3 list-objects my-bucket
@@ -217,66 +240,78 @@ Lists objects stored inside a bucket.
   ```
 
 #### `object-info`
-Retrieves detailed metadata for a specific object (size, ETag, last modified date, Content-Type).
+Displays the details of an object: name, size, last modified date, content type and ETag.
 
 - **Syntax**: `mys3 object-info <BUCKET_NAME> <OBJECT_KEY> [OPTIONS]`
-- **Options**:
+- **Arguments and options**:
   - `<BUCKET_NAME>`: Target bucket.
-  - `<OBJECT_KEY>`: Key/path of the object.
-  - `--alias`: *(Optional)* Run against a specific alias.
+  - `<OBJECT_KEY>`: Key of the object.
+  - `--alias <ALIAS>`: *(Optional)* Run against a specific alias.
+  - `--output <text|JSON>`: *(Optional)* Output format.
 - **Example**:
   ```bash
   mys3 object-info my-bucket report.pdf
   ```
 
 #### `download-file`
-Downloads an object from a bucket to the local filesystem.
+Downloads an object to the local disk. A local file that already exists is not replaced unless `--overwrite` is given.
 
-- **Syntax**: `mys3 download-file <BUCKET_NAME> <OBJECT_KEY> <LOCAL_PATH> [OPTIONS]`
-- **Options**:
+- **Syntax**: `mys3 download-file <BUCKET_NAME> <OBJECT_KEY> [OPTIONS]`
+- **Arguments and options**:
   - `<BUCKET_NAME>`: Target bucket.
-  - `<OBJECT_KEY>`: Object key to download.
-  - `<LOCAL_PATH>`: Destination path on local filesystem.
-  - `--alias`: *(Optional)* Run against a specific alias.
+  - `<OBJECT_KEY>`: Key of the object to download.
+  - `--alias <ALIAS>`: *(Optional)* Run against a specific alias.
+  - `--output <PATH>`: *(Optional)* Local destination path (defaults to the object name in the current directory).
+  - `--overwrite`: *(Optional)* Replace the local file if it already exists.
 - **Example**:
   ```bash
-  mys3 download-file my-bucket report.pdf ./downloads/report.pdf
+  mys3 download-file my-bucket report.pdf
+  mys3 download-file my-bucket report.pdf --output ./downloads/report.pdf
   ```
 
 #### `copy-file`
-Copies an object from one location to another within or across buckets.
+Copies an object to another bucket, or to another key of the same bucket, on the same server.
 
-- **Syntax**: `mys3 copy-file <SRC_BUCKET/SRC_KEY> <DEST_BUCKET/DEST_KEY> [OPTIONS]`
-- **Options**:
-  - `<SRC_BUCKET/SRC_KEY>`: Source bucket and object key.
-  - `<DEST_BUCKET/DEST_KEY>`: Target bucket and object key.
-  - `--alias`: *(Optional)* Run against a specific alias.
+- **Syntax**: `mys3 copy-file <SOURCE_BUCKET> <OBJECT_KEY> <DESTINATION_BUCKET> [OPTIONS]`
+- **Arguments and options**:
+  - `<SOURCE_BUCKET>`: Bucket that contains the object.
+  - `<OBJECT_KEY>`: Key of the object to copy.
+  - `<DESTINATION_BUCKET>`: Bucket that receives the copy.
+  - `--alias <ALIAS>`: *(Optional)* Run against a specific alias.
+  - `--key <NEW_KEY>`: *(Optional)* Key in the destination bucket (defaults to the same key).
+  - `--overwrite`: *(Optional)* Replace the object if it already exists at the destination.
 - **Example**:
   ```bash
-  mys3 copy-file my-bucket/report.pdf my-bucket/backups/report.pdf
+  mys3 copy-file my-bucket report.pdf backup-bucket
+  mys3 copy-file my-bucket report.pdf my-bucket --key backups/report.pdf
   ```
 
 #### `move-file`
-Moves or renames an object in S3 (copies then removes the source object).
+Moves or renames an object: it is copied, then the source object is deleted. There is no confirmation.
 
-- **Syntax**: `mys3 move-file <SRC_BUCKET/SRC_KEY> <DEST_BUCKET/DEST_KEY> [OPTIONS]`
-- **Options**:
-  - `<SRC_BUCKET/SRC_KEY>`: Source object.
-  - `<DEST_BUCKET/DEST_KEY>`: Destination object.
-  - `--alias`: *(Optional)* Run against a specific alias.
+- **Syntax**: `mys3 move-file <SOURCE_BUCKET> <OBJECT_KEY> <DESTINATION_BUCKET> [OPTIONS]`
+- **Arguments and options**:
+  - `<SOURCE_BUCKET>`: Bucket that contains the object.
+  - `<OBJECT_KEY>`: Key of the object to move.
+  - `<DESTINATION_BUCKET>`: Bucket that receives the object.
+  - `--alias <ALIAS>`: *(Optional)* Run against a specific alias.
+  - `--key <NEW_KEY>`: *(Optional)* Key in the destination bucket (defaults to the same key).
+  - `--overwrite`: *(Optional)* Replace the object if it already exists at the destination.
 - **Example**:
   ```bash
-  mys3 move-file my-bucket/report.pdf archive-bucket/old-report.pdf
+  mys3 move-file my-bucket report.pdf archive-bucket
+  mys3 move-file my-bucket report.pdf my-bucket --key old-report.pdf
   ```
 
 #### `delete-file`
-Deletes a single object from a bucket.
+Deletes a single object from a bucket, after a confirmation.
 
 - **Syntax**: `mys3 delete-file <BUCKET_NAME> <OBJECT_KEY> [OPTIONS]`
-- **Options**:
+- **Arguments and options**:
   - `<BUCKET_NAME>`: Target bucket.
-  - `<OBJECT_KEY>`: Object key to delete.
-  - `--alias`: *(Optional)* Run against a specific alias.
+  - `<OBJECT_KEY>`: Key of the object to delete.
+  - `--alias <ALIAS>`: *(Optional)* Run against a specific alias.
+  - `--force`, `-f`: *(Optional)* Skip the confirmation.
 - **Example**:
   ```bash
   mys3 delete-file my-bucket old-report.pdf
@@ -287,18 +322,22 @@ Deletes a single object from a bucket.
 ### 4. Synchronization Command
 
 #### `sync`
-Synchronizes a local directory with a remote bucket (or a remote bucket prefix). Uploads missing or updated files.
+Synchronizes a local folder to a bucket, one way: the contents of the folder, subfolders included, are uploaded when they are missing or different in the bucket.
 
-- **Syntax**: `mys3 sync <LOCAL_DIRECTORY> <BUCKET_NAME>[/<PREFIX>] [OPTIONS]`
-- **Options**:
-  - `<LOCAL_DIRECTORY>`: Path to local folder.
-  - `<BUCKET_NAME>[/<PREFIX>]`: Target bucket and optional directory prefix.
-  - `--delete`: *(Optional)* Delete remote files that do not exist in the local directory.
-  - `--alias`: *(Optional)* Run against a specific alias.
+- **Syntax**: `mys3 sync <LOCAL_FOLDER> <BUCKET_NAME> [OPTIONS]`
+- **Arguments and options**:
+  - `<LOCAL_FOLDER>`: Path of the local folder.
+  - `<BUCKET_NAME>`: Destination bucket.
+  - `--alias <ALIAS>`: *(Optional)* Run against a specific alias.
+  - `--prefix <PREFIX>`: *(Optional)* Destination prefix in the bucket.
+  - `--dry-run`: *(Optional)* Show what would be done without doing it.
+  - `--delete`: *(Optional)* Also remove from the bucket the objects that no longer exist locally, after a confirmation.
+  - `--force`, `-f`: *(Optional)* Skip that confirmation.
 - **Example**:
   ```bash
-  mys3 sync ./data my-bucket/backup-data
-  mys3 sync ./data my-bucket/backup-data --delete
+  mys3 sync ./data my-bucket
+  mys3 sync ./data my-bucket --prefix backup-data
+  mys3 sync ./data my-bucket --prefix backup-data --delete --dry-run
   ```
 
 ---
@@ -315,6 +354,35 @@ cargo clippy -- -D warnings
 # Run tests
 cargo test
 ```
+
+### Functional tests against MinIO
+
+Some tests talk to a real server. They are marked `#[ignore]`, so `cargo test` skips them. To run them, start MinIO and give its keys to the tests:
+
+```bash
+docker compose up -d
+
+# Keys of the local MinIO (MINIO_ROOT_USER and MINIO_ROOT_PASSWORD in .env)
+export MYS3_ACCESS_KEY=admin
+export MYS3_SECRET_KEY=admin12345
+
+# Only the tests that need MinIO
+cargo test -- --ignored
+
+# Every test
+cargo test -- --include-ignored
+```
+
+The tests use `http://localhost:9000` by default. Set `MYS3_TEST_URL` to use another address.
+
+### Writing a functional test
+
+A functional test runs the real `mys3` binary and checks its output and its exit code. It lives in `tests/test_<command>.rs` and uses the helpers of `tests/common`:
+
+- `TestEnv` gives the binary a temporary home directory, so a test never reads or writes your real `~/.mys3/config.json`.
+- `TempBucket` is a bucket with a unique name on the test server, deleted with its objects at the end of the test.
+
+`tests/common/mod.rs` starts with an example, and `tests/test_harness.rs` contains working tests.
 
 For contribution rules, branch conventions, and PR workflow, see [CONTRIBUTING.md](CONTRIBUTING.md).
 

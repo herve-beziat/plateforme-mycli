@@ -42,6 +42,10 @@ pub enum MyS3Error {
     #[error("invalid server URL '{0}' (expected http://host[:port] or https://host[:port])")]
     InvalidUrl(String),
 
+    /// A status the command does not handle specifically, with the S3 error code.
+    #[error("unexpected server response {status} ({code})")]
+    UnexpectedResponse { status: u16, code: String },
+
     #[error("bucket '{0}' not found")]
     BucketNotFound(String),
 

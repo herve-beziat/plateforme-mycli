@@ -316,6 +316,35 @@ cargo clippy -- -D warnings
 cargo test
 ```
 
+### Functional tests against MinIO
+
+Some tests talk to a real server. They are marked `#[ignore]`, so `cargo test` skips them. To run them, start MinIO and give its keys to the tests:
+
+```bash
+docker compose up -d
+
+# Keys of the local MinIO (MINIO_ROOT_USER and MINIO_ROOT_PASSWORD in .env)
+export MYS3_ACCESS_KEY=admin
+export MYS3_SECRET_KEY=admin12345
+
+# Only the tests that need MinIO
+cargo test -- --ignored
+
+# Every test
+cargo test -- --include-ignored
+```
+
+The tests use `http://localhost:9000` by default. Set `MYS3_TEST_URL` to use another address.
+
+### Writing a functional test
+
+A functional test runs the real `mys3` binary and checks its output and its exit code. It lives in `tests/test_<command>.rs` and uses the helpers of `tests/common`:
+
+- `TestEnv` gives the binary a temporary home directory, so a test never reads or writes your real `~/.mys3/config.json`.
+- `TempBucket` is a bucket with a unique name on the test server, deleted with its objects at the end of the test.
+
+`tests/common/mod.rs` starts with an example, and `tests/test_harness.rs` contains working tests.
+
 For contribution rules, branch conventions, and PR workflow, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---

@@ -1,7 +1,9 @@
-use mys3::client::S3Client;
-use mys3::commands::create_bucket::{create_bucket, location_body, validate_bucket_name};
-use mys3::config::ResolvedAlias;
+mod common;
+
+use common::TestEnv;
+use mys3::commands::create_bucket::{location_body, validate_bucket_name};
 use mys3::error::MyS3Error;
+use predicates::str::contains;
 
 #[test]
 fn test_valid_bucket_names() {
@@ -48,38 +50,68 @@ fn test_location_body_contains_the_region() {
     assert!(body.contains("<LocationConstraint>eu-west-1</LocationConstraint>"));
 }
 
-/// Client on the local MinIO, with the keys of `MYS3_ACCESS_KEY` / `MYS3_SECRET_KEY`.
-fn minio_client() -> S3Client {
-    S3Client::new(ResolvedAlias {
-        name: "test".to_string(),
-        url: "http://localhost:9000".to_string(),
-        access_key: std::env::var("MYS3_ACCESS_KEY").expect("MYS3_ACCESS_KEY is not set"),
-        secret_key: std::env::var("MYS3_SECRET_KEY").expect("MYS3_SECRET_KEY is not set"),
-        region: "us-east-1".to_string(),
-    })
-    .unwrap()
+/// The name is checked before the configuration is read: no alias is needed.
+#[test]
+fn test_invalid_name_is_refused_before_any_request() {
+    TestEnv::new()
+        .cmd()
+        .args(["create-bucket", "Bad_Name"])
+        .assert()
+        .code(1)
+        .stderr(contains("invalid bucket name 'Bad_Name'"));
 }
 
-/// Needs MinIO (`docker compose up -d`). Run with `cargo test -- --ignored`.
 #[test]
-#[ignore]
-fn test_create_bucket_then_already_exists() {
-    let client = minio_client();
-    let nanos = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_nanos();
-    let bucket = format!("mys3-test-{nanos}");
+fn test_unknown_alias_is_refused() {
+    TestEnv::new()
+        .cmd()
+        .args(["create-bucket", "my-bucket", "--alias", "nope"])
+        .assert()
+        .code(1)
+        .stderr(contains("alias 'nope' not found"));
+}
 
-    let first = create_bucket(&client, &bucket, "us-east-1");
-    let second = create_bucket(&client, &bucket, "us-east-1");
-    client
-        .send("DELETE", &format!("/{bucket}"), &[], Vec::new(), Vec::new())
-        .unwrap();
+#[test]
+#[ignore = "needs MinIO"]
+fn test_create_bucket_creates_the_bucket() {
+    let env = TestEnv::with_server();
+    let bucket = env.reserve_bucket();
 
-    assert!(first.is_ok(), "{first:?}");
-    assert!(
-        matches!(second, Err(MyS3Error::BucketAlreadyExists(_))),
-        "{second:?}"
-    );
+    env.cmd()
+        .args(["create-bucket", bucket.name()])
+        .assert()
+        .success()
+        .stdout(contains(format!("Bucket '{}' created.", bucket.name())));
+
+    assert!(bucket.exists());
+}
+
+#[test]
+#[ignore = "needs MinIO"]
+fn test_create_bucket_with_region() {
+    let env = TestEnv::with_server();
+    let bucket = env.reserve_bucket();
+
+    env.cmd()
+        .args(["create-bucket", bucket.name(), "--region", "eu-west-1"])
+        .assert()
+        .success();
+
+    assert!(bucket.exists());
+}
+
+#[test]
+#[ignore = "needs MinIO"]
+fn test_existing_bucket_is_refused() {
+    let env = TestEnv::with_server();
+    let bucket = env.new_bucket();
+
+    env.cmd()
+        .args(["create-bucket", bucket.name()])
+        .assert()
+        .code(1)
+        .stderr(contains(format!(
+            "bucket '{}' already exists",
+            bucket.name()
+        )));
 }

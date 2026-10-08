@@ -264,21 +264,4 @@ mod tests {
         assert_eq!(response("").error_code(), None);
         assert_eq!(response("<Code>unterminated").error_code(), None);
     }
-
-    /// Needs MinIO (`docker compose up -d`) and its keys in `MYS3_ACCESS_KEY`
-    /// and `MYS3_SECRET_KEY`. Run with `cargo test -- --ignored`.
-    #[test]
-    #[ignore]
-    fn signed_list_buckets_is_accepted_by_minio() {
-        let mut alias = alias("http://localhost:9000");
-        alias.access_key = std::env::var("MYS3_ACCESS_KEY").expect("MYS3_ACCESS_KEY is not set");
-        alias.secret_key = std::env::var("MYS3_SECRET_KEY").expect("MYS3_SECRET_KEY is not set");
-
-        let response = S3Client::new(alias)
-            .unwrap()
-            .send("GET", "/", &[], Vec::new(), Vec::new())
-            .unwrap();
-        assert_eq!(response.status, 200);
-        assert!(String::from_utf8_lossy(&response.body).contains("ListAllMyBucketsResult"));
-    }
 }

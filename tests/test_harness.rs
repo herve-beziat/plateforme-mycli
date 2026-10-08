@@ -72,7 +72,30 @@ fn each_environment_has_its_own_home() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+fn dotenv_reads_key_value_lines() {
+    let settings = common::parse_dotenv("MINIO_ROOT_USER=admin\nMINIO_PORT=9000\n");
+    assert_eq!(settings["MINIO_ROOT_USER"], "admin");
+    assert_eq!(settings["MINIO_PORT"], "9000");
+}
+
+#[test]
+fn dotenv_ignores_comments_and_blank_lines() {
+    let settings = common::parse_dotenv("# Local MinIO\n\n   \nMINIO_PORT=9000\n");
+    assert_eq!(settings.len(), 1);
+    assert_eq!(settings["MINIO_PORT"], "9000");
+}
+
+#[test]
+fn dotenv_removes_quotes_and_keeps_equal_signs_in_values() {
+    let settings = common::parse_dotenv("A=\"quoted\"\nB='single'\nC=x=y\n  D = spaced  \n");
+    assert_eq!(settings["A"], "quoted");
+    assert_eq!(settings["B"], "single");
+    assert_eq!(settings["C"], "x=y");
+    assert_eq!(settings["D"], "spaced");
+}
+
+#[test]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn server_environment_has_a_default_alias() {
     let env = TestEnv::with_server();
 
@@ -81,7 +104,18 @@ fn server_environment_has_a_default_alias() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
+fn signed_list_buckets_is_accepted_by_minio() {
+    let response = TestEnv::with_server()
+        .client()
+        .send("GET", "/", &[], Vec::new(), Vec::new())
+        .unwrap();
+    assert_eq!(response.status, 200);
+    assert!(String::from_utf8_lossy(&response.body).contains("ListAllMyBucketsResult"));
+}
+
+#[test]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn new_bucket_exists_then_is_deleted_with_its_objects() {
     let env = TestEnv::with_server();
     let name;
@@ -101,7 +135,7 @@ fn new_bucket_exists_then_is_deleted_with_its_objects() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn bucket_names_are_unique_and_valid() {
     let env = TestEnv::with_server();
     let first = env.reserve_bucket();
@@ -118,7 +152,7 @@ fn bucket_names_are_unique_and_valid() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn reserved_bucket_is_not_created() {
     let env = TestEnv::with_server();
     let bucket = env.reserve_bucket();

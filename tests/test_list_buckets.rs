@@ -28,7 +28,7 @@ fn list_buckets_fails_with_nonexistent_alias() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn list_buckets_reports_unreachable_server() {
     let env = TestEnv::new();
 
@@ -53,7 +53,7 @@ fn list_buckets_reports_unreachable_server() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn list_buckets_reports_authentication_refused() {
     let env = TestEnv::new();
 
@@ -80,7 +80,7 @@ fn list_buckets_reports_authentication_refused() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn list_buckets_shows_created_bucket_in_text_output() {
     let env = TestEnv::with_server();
     let bucket = env.new_bucket();
@@ -93,7 +93,7 @@ fn list_buckets_shows_created_bucket_in_text_output() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn list_buckets_supports_explicit_alias_flag() {
     let env = TestEnv::with_server();
     let bucket = env.new_bucket();
@@ -106,7 +106,7 @@ fn list_buckets_supports_explicit_alias_flag() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn list_buckets_supports_json_output() {
     let env = TestEnv::with_server();
     let bucket = env.new_bucket();

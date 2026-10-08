@@ -8,9 +8,10 @@
 //! - [`TempBucket`] is a bucket with a unique name on the test server, deleted
 //!   with its objects when the test ends, even if the test fails.
 //!
-//! Tests that talk to the server need MinIO (`docker compose up -d`) and its
-//! keys in `MYS3_ACCESS_KEY` and `MYS3_SECRET_KEY`. Mark them `#[ignore]` and
-//! run them with `cargo test -- --ignored`.
+//! Tests that talk to the server need MinIO (`docker compose up -d`). Its keys
+//! come from `MYS3_ACCESS_KEY` and `MYS3_SECRET_KEY`, otherwise from the `.env`
+//! file of the repository. Mark these tests `#[ignore]` and run them with
+//! `cargo test -- --ignored`.
 //!
 //! Example (in `tests/test_<command>.rs`):
 //!
@@ -37,6 +38,7 @@
 // Each test file is compiled on its own and uses only some of the helpers.
 #![allow(dead_code)]
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -49,8 +51,8 @@ use tempfile::TempDir;
 /// Name of the default alias configured by [`TestEnv::with_server`].
 pub const TEST_ALIAS: &str = "test";
 
-/// URL of the test server, unless `MYS3_TEST_URL` is set.
-const DEFAULT_SERVER_URL: &str = "http://localhost:9000";
+/// Port of MinIO when neither `MYS3_TEST_URL` nor `MINIO_PORT` (in `.env`) is set.
+const DEFAULT_MINIO_PORT: &str = "9000";
 
 /// A temporary home directory for the `mys3` binary, deleted at the end of the test.
 pub struct TestEnv {
@@ -69,7 +71,8 @@ impl TestEnv {
 
     /// A home directory whose default alias (`test`) points to the test server.
     ///
-    /// The keys are read from `MYS3_ACCESS_KEY` and `MYS3_SECRET_KEY`.
+    /// The keys are read from `MYS3_ACCESS_KEY` and `MYS3_SECRET_KEY`,
+    /// otherwise from the `.env` file of the repository.
     pub fn with_server() -> Self {
         let mut env = Self::new();
         let server = server_alias();
@@ -142,8 +145,9 @@ impl TestEnv {
         }
     }
 
-    /// A client signed with the keys of the test server.
-    fn client(&self) -> S3Client {
+    /// A client signed with the keys of the test server, to send requests
+    /// without going through the binary.
+    pub fn client(&self) -> S3Client {
         let server = self.server.clone().expect(
             "this test needs the server: build the environment with TestEnv::with_server()",
         );
@@ -296,20 +300,65 @@ impl Drop for TempBucket {
     }
 }
 
-/// The test server and its keys, read from the environment.
+/// The test server and its keys. Each setting comes from an environment
+/// variable, otherwise from the `.env` file of the repository.
 fn server_alias() -> ResolvedAlias {
-    let key = |name: &str| {
-        std::env::var(name).unwrap_or_else(|_| {
-            panic!("{name} is not set: export the MinIO keys before running the ignored tests")
-        })
+    let dotenv = read_dotenv();
+    let env_var = |name: &str| std::env::var(name).ok().filter(|value| !value.is_empty());
+    let key = |variable: &str, dotenv_key: &str| {
+        env_var(variable)
+            .or_else(|| dotenv.get(dotenv_key).cloned())
+            .unwrap_or_else(|| {
+                panic!(
+                    "no MinIO key: set {variable}, or {dotenv_key} in .env (cp .env.example .env)"
+                )
+            })
     };
+    let port = dotenv
+        .get("MINIO_PORT")
+        .map_or(DEFAULT_MINIO_PORT, String::as_str);
+
     ResolvedAlias {
         name: TEST_ALIAS.to_string(),
-        url: std::env::var("MYS3_TEST_URL").unwrap_or_else(|_| DEFAULT_SERVER_URL.to_string()),
-        access_key: key("MYS3_ACCESS_KEY"),
-        secret_key: key("MYS3_SECRET_KEY"),
+        url: env_var("MYS3_TEST_URL").unwrap_or_else(|| format!("http://localhost:{port}")),
+        access_key: key("MYS3_ACCESS_KEY", "MINIO_ROOT_USER"),
+        secret_key: key("MYS3_SECRET_KEY", "MINIO_ROOT_PASSWORD"),
         region: "us-east-1".to_string(),
     }
+}
+
+/// Settings of the `.env` file at the root of the repository; empty when the
+/// file does not exist.
+fn read_dotenv() -> HashMap<String, String> {
+    let path = Path::new(env!("CARGO_MANIFEST_DIR")).join(".env");
+    std::fs::read_to_string(path)
+        .map(|content| parse_dotenv(&content))
+        .unwrap_or_default()
+}
+
+/// `KEY=VALUE` lines of a `.env` file. Blank lines and `#` comments are
+/// ignored, and the quotes around a value are removed.
+pub fn parse_dotenv(content: &str) -> HashMap<String, String> {
+    content
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .filter_map(|line| line.split_once('='))
+        .map(|(key, value)| (key.trim().to_string(), unquote(value.trim()).to_string()))
+        .collect()
+}
+
+/// `value` without the quotes around it, if any.
+fn unquote(value: &str) -> &str {
+    for quote in ['"', '\''] {
+        if let Some(inner) = value
+            .strip_prefix(quote)
+            .and_then(|rest| rest.strip_suffix(quote))
+        {
+            return inner;
+        }
+    }
+    value
 }
 
 /// A valid bucket name that no other test, in this run or another one, uses.

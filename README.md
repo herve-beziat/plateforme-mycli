@@ -369,14 +369,10 @@ cargo test
 
 ### Functional tests against MinIO
 
-Some tests talk to a real server. They are marked `#[ignore]`, so `cargo test` skips them. To run them, start MinIO and give its keys to the tests:
+Some tests talk to a real server. They are marked `#[ignore]`, so `cargo test` skips them. To run them, start MinIO:
 
 ```bash
 docker compose up -d
-
-# Keys of the local MinIO (MINIO_ROOT_USER and MINIO_ROOT_PASSWORD in .env)
-export MYS3_ACCESS_KEY=admin
-export MYS3_SECRET_KEY=admin12345
 
 # Only the tests that need MinIO
 cargo test -- --ignored
@@ -385,7 +381,7 @@ cargo test -- --ignored
 cargo test -- --include-ignored
 ```
 
-The tests use `http://localhost:9000` by default. Set `MYS3_TEST_URL` to use another address.
+The tests read the keys and the port of MinIO from `.env` (`MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`, `MINIO_PORT`). To test against another server, set `MYS3_ACCESS_KEY`, `MYS3_SECRET_KEY` and `MYS3_TEST_URL`: they take priority over `.env`.
 
 ### Writing a functional test
 

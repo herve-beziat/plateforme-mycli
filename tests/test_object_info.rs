@@ -7,7 +7,7 @@ use predicates::prelude::PredicateBooleanExt;
 use predicates::str::{contains, is_match};
 use serde_json::Value;
 
-const MINIO: &str = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY";
+const MINIO: &str = "needs MinIO (docker compose up -d)";
 
 #[test]
 fn object_info_fails_without_default_alias_configured() {
@@ -71,7 +71,7 @@ fn object_info_help_lists_alias_and_output() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn object_info_displays_the_details_in_text_format() {
     let _ = MINIO;
     let env = TestEnv::with_server();
@@ -91,7 +91,7 @@ fn object_info_displays_the_details_in_text_format() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn object_info_supports_json_output() {
     let env = TestEnv::with_server();
     let bucket = env.new_bucket();
@@ -118,7 +118,7 @@ fn object_info_supports_json_output() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn object_info_supports_explicit_alias() {
     let env = TestEnv::with_server();
     let bucket = env.new_bucket();
@@ -155,7 +155,7 @@ fn object_info_supports_explicit_alias() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn object_info_reports_an_empty_object() {
     let env = TestEnv::with_server();
     let bucket = env.new_bucket();
@@ -170,7 +170,7 @@ fn object_info_reports_an_empty_object() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn object_info_supports_special_characters_in_keys() {
     let env = TestEnv::with_server();
     let bucket = env.new_bucket();
@@ -186,7 +186,7 @@ fn object_info_supports_special_characters_in_keys() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn object_info_fails_when_bucket_does_not_exist() {
     let env = TestEnv::with_server();
 
@@ -199,7 +199,7 @@ fn object_info_fails_when_bucket_does_not_exist() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn object_info_fails_when_object_does_not_exist() {
     let env = TestEnv::with_server();
     let bucket = env.new_bucket();

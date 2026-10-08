@@ -29,7 +29,7 @@ fn list_objects_fails_with_nonexistent_alias() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn list_objects_fails_when_bucket_does_not_exist() {
     let env = TestEnv::with_server();
 
@@ -41,7 +41,7 @@ fn list_objects_fails_when_bucket_does_not_exist() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn list_objects_displays_all_objects_in_text_format() {
     let env = TestEnv::with_server();
     let bucket = env.new_bucket();
@@ -57,7 +57,7 @@ fn list_objects_displays_all_objects_in_text_format() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn list_objects_filters_by_prefix() {
     let env = TestEnv::with_server();
     let bucket = env.new_bucket();
@@ -76,7 +76,7 @@ fn list_objects_filters_by_prefix() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn list_objects_supports_explicit_alias() {
     let env = TestEnv::with_server();
     let bucket = env.new_bucket();
@@ -91,7 +91,7 @@ fn list_objects_supports_explicit_alias() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn list_objects_supports_json_output() {
     let env = TestEnv::with_server();
     let bucket = env.new_bucket();
@@ -123,7 +123,7 @@ fn list_objects_supports_json_output() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn list_objects_empty_bucket_produces_no_error_and_empty_output() {
     let env = TestEnv::with_server();
     let bucket = env.new_bucket();

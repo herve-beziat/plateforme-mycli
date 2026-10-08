@@ -38,6 +38,10 @@ pub enum MyS3Error {
     #[error("invalid configuration file '{0}': {1}")]
     InvalidConfig(String, serde_json::Error),
 
+    /// The answer to a confirmation question could not be read.
+    #[error("cannot read the answer: {0}")]
+    InputRead(std::io::Error),
+
     /// The URL of an alias is not `http(s)://host[:port]`.
     #[error("invalid server URL '{0}' (expected http://host[:port] or https://host[:port])")]
     InvalidUrl(String),

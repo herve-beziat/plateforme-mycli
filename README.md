@@ -361,7 +361,7 @@ Synchronizes a local folder to a bucket, one way: the contents of the folder, su
 cargo fmt --check
 
 # Run linter
-cargo clippy -- -D warnings
+cargo clippy --all-targets -- -D warnings
 
 # Run tests
 cargo test

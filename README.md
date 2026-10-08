@@ -253,6 +253,17 @@ Displays the details of an object: name, size, last modified date, content type 
   ```bash
   mys3 object-info my-bucket report.pdf
   ```
+- **Output**:
+  ```
+  Name:          report.pdf
+  Size:          1024 bytes
+  Last modified: 2026-10-08T08:21:06Z
+  Content type:  application/pdf
+  ETag:          5d41402abc4b2a76b9719d911017c592
+  ```
+  With `--output JSON`, the keys are `name`, `size`, `last_modified`, `content_type` and `etag`.
+- **Errors**: the command fails (exit code `1`) if the bucket or the object does not exist.
+- **Note**: the ETag is the MD5 of the content only for single-part, unencrypted uploads.
 
 #### `download-file`
 Downloads an object to the local disk. A local file that already exists is not replaced unless `--overwrite` is given.

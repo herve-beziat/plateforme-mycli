@@ -1,0 +1,61 @@
+# Continuous integration: on every pull request to `develop` or `main`, and on
+# every push to `develop`, checks the formatting and the lints, then runs every
+# test, including the ones that need MinIO.
+
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop]
+
+# A new push on the same branch cancels the run that is still in progress.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: Checks and tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v5
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Cache the cargo dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check the formatting
+        run: cargo fmt --check
+
+      - name: Run clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+      # Same MinIO as on a developer machine; the keys of .env.example are
+      # enough for a throwaway server, and the tests read them from .env.
+      - name: Start MinIO
+        run: |
+          cp .env.example .env
+          docker compose up -d
+
+      - name: Wait until MinIO answers
+        run: timeout 60 bash -c 'until curl -sf http://localhost:9000/minio/health/live; do sleep 1; done'
+
+      - name: Run every test
+        run: cargo test -- --include-ignored
+
+      - name: Show the MinIO logs
+        if: failure()
+        run: docker compose logs minio

@@ -168,12 +168,13 @@ Creates a new bucket.
 
 - **Syntax**: `mys3 create-bucket <BUCKET_NAME> [OPTIONS]`
 - **Arguments and options**:
-  - `<BUCKET_NAME>`: Name of the bucket to create (must adhere to S3 naming conventions).
+  - `<BUCKET_NAME>`: Name of the bucket to create (must adhere to S3 naming conventions: 3-63 characters, lowercase letters, digits, dots and hyphens).
   - `--alias <ALIAS>`: *(Optional)* Run against a specific alias.
-  - `--region <REGION>`: *(Optional)* Region of the bucket.
+  - `--region <REGION>`: *(Optional)* Region of the bucket (default: the region of the alias).
 - **Example**:
   ```bash
   mys3 create-bucket my-bucket
+  mys3 create-bucket my-eu-bucket --region eu-west-1
   ```
 
 #### `bucket-info`

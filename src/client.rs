@@ -8,7 +8,7 @@ use sha2::{Digest, Sha256};
 use ureq::Agent;
 use ureq::http::{self, Uri};
 
-use crate::config::ResolvedAlias;
+use crate::config::{Config, Credentials, ResolvedAlias};
 use crate::error::MyS3Error;
 use crate::signer;
 
@@ -32,7 +32,30 @@ pub struct Response {
     pub body: Vec<u8>,
 }
 
+impl Response {
+    /// Code of an S3 XML error body (`<Code>NoSuchBucket</Code>`), if any.
+    pub fn error_code(&self) -> Option<String> {
+        let body = String::from_utf8_lossy(&self.body);
+        let start = body.find("<Code>")? + "<Code>".len();
+        let end = start + body[start..].find("</Code>")?;
+        Some(body[start..end].to_string())
+    }
+}
+
 impl S3Client {
+    /// Client for `alias` (`--alias`, otherwise the default alias), with the
+    /// keys of `MYS3_ACCESS_KEY` / `MYS3_SECRET_KEY` taking priority over the file.
+    pub fn connect(alias: Option<&str>) -> Result<Self, MyS3Error> {
+        let alias =
+            Config::load()?.resolve(alias, Credentials::default(), Credentials::from_env())?;
+        Self::new(alias)
+    }
+
+    /// Region of the alias.
+    pub fn region(&self) -> &str {
+        &self.alias.region
+    }
+
     /// Checks the URL of the alias (`http://` or `https://`, no path) and
     /// prepares the client.
     pub fn new(alias: ResolvedAlias) -> Result<Self, MyS3Error> {
@@ -219,6 +242,27 @@ mod tests {
             ),
             "http://localhost:9000/my-bucket/dir/my%20file.txt?prefix=a%20b&list-type=2"
         );
+    }
+
+    fn response(body: &str) -> Response {
+        Response {
+            status: 404,
+            headers: Vec::new(),
+            body: body.as_bytes().to_vec(),
+        }
+    }
+
+    #[test]
+    fn error_code_is_read_from_the_xml_body() {
+        let body = r#"<?xml version="1.0" encoding="UTF-8"?>
+<Error><Code>NoSuchBucket</Code><Message>The specified bucket does not exist</Message></Error>"#;
+        assert_eq!(response(body).error_code().as_deref(), Some("NoSuchBucket"));
+    }
+
+    #[test]
+    fn error_code_is_none_without_xml_error() {
+        assert_eq!(response("").error_code(), None);
+        assert_eq!(response("<Code>unterminated").error_code(), None);
     }
 
     /// Needs MinIO (`docker compose up -d`) and its keys in `MYS3_ACCESS_KEY`

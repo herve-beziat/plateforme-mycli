@@ -184,6 +184,20 @@ impl TempBucket {
         );
     }
 
+    /// Stores an object with an explicit `Content-Type`, without going through the binary.
+    pub fn put_object_with_content_type(&self, key: &str, content: &[u8], content_type: &str) {
+        let headers = vec![("content-type".to_string(), content_type.to_string())];
+        let response = self
+            .try_send_with_headers("PUT", key, &[], headers, content.to_vec())
+            .unwrap_or_else(|message| panic!("{message}"));
+        assert_eq!(
+            response.status,
+            200,
+            "cannot store the object '{key}': {}",
+            String::from_utf8_lossy(&response.body)
+        );
+    }
+
     /// Content of an object, or `None` if it does not exist.
     pub fn get_object(&self, key: &str) -> Option<Vec<u8>> {
         let response = self.send("GET", key, &[], Vec::new());
@@ -213,13 +227,24 @@ impl TempBucket {
         query: &[(&str, &str)],
         body: Vec<u8>,
     ) -> Result<Response, String> {
+        self.try_send_with_headers(method, key, query, Vec::new(), body)
+    }
+
+    fn try_send_with_headers(
+        &self,
+        method: &str,
+        key: &str,
+        query: &[(&str, &str)],
+        headers: Vec<(String, String)>,
+        body: Vec<u8>,
+    ) -> Result<Response, String> {
         let path = if key.is_empty() {
             format!("/{}", self.name)
         } else {
             format!("/{}/{key}", self.name)
         };
         self.client
-            .send(method, &path, query, Vec::new(), body)
+            .send(method, &path, query, headers, body)
             .map_err(|err| format!("{method} {path} failed: {err}"))
     }
 

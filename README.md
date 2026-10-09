@@ -48,6 +48,8 @@ docker compose up -d
 - **S3 API endpoint**: `http://localhost:9000`
 - **MinIO Web Console**: `http://localhost:9001` (Credentials defined in `.env`: `admin` / `admin12345`)
 
+The image comes from `ghcr.io/herve-beziat/minio`. MinIO no longer publishes its Docker images (Docker Hub and quay.io refuse the download), so the project keeps an unchanged copy of the release it uses, `RELEASE.2025-09-07T16-13-09Z`.
+
 To check MinIO container logs or stop the service:
 
 ```bash
@@ -361,7 +363,7 @@ Synchronizes a local folder to a bucket, one way: the contents of the folder, su
 cargo fmt --check
 
 # Run linter
-cargo clippy -- -D warnings
+cargo clippy --all-targets -- -D warnings
 
 # Run tests
 cargo test
@@ -391,6 +393,20 @@ A functional test runs the real `mys3` binary and checks its output and its exit
 - `TempBucket` is a bucket with a unique name on the test server, deleted with its objects at the end of the test.
 
 `tests/common/mod.rs` starts with an example, and `tests/test_harness.rs` contains working tests.
+
+### Continuous integration
+
+On every pull request to `develop` or `main`, and on every push to `develop`, GitHub Actions runs `.github/workflows/ci.yml`. It is split into five jobs:
+
+| Job | What it does |
+|---|---|
+| Formatting | `cargo fmt --check` |
+| Lints | `cargo clippy --all-targets -- -D warnings` |
+| Secrets | [gitleaks](https://github.com/gitleaks/gitleaks) looks for keys, tokens or passwords in the commits |
+| Build | `cargo build --release --locked`, then uploads the `mys3` binary as an artifact of the run (kept 7 days) |
+| Tests | Starts MinIO with `docker-compose.yml` and the keys of `.env.example`, then runs `cargo test -- --include-ignored` |
+
+The first three jobs run in parallel. Build starts when they all pass, and Tests when Build passes. The result appears in the checks of the pull request. Run the same commands locally before pushing to avoid a red CI.
 
 For contribution rules, branch conventions, and PR workflow, see [CONTRIBUTING.md](CONTRIBUTING.md).
 

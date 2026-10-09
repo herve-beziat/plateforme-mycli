@@ -1,6 +1,10 @@
 # Continuous integration: on every pull request to `develop` or `main`, and on
-# every push to `develop`, checks the formatting and the lints, then runs every
-# test, including the ones that need MinIO.
+# every push to `develop`, checks the formatting, the lints and the secrets,
+# builds `mys3`, then runs every test, including the ones that need MinIO.
+#
+#   Formatting ─┐
+#   Lints ──────┼──▶ Build ──▶ Tests
+#   Secrets ────┘
 
 name: CI
 
@@ -22,8 +26,8 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  test:
-    name: Checks and tests
+  fmt:
+    name: Formatting
     runs-on: ubuntu-latest
     steps:
       - name: Check out the code
@@ -32,16 +36,86 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          components: rustfmt, clippy
-
-      - name: Cache the cargo dependencies
-        uses: Swatinem/rust-cache@v2
+          components: rustfmt
 
       - name: Check the formatting
         run: cargo fmt --check
 
+  clippy:
+    name: Lints
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v5
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Cache the cargo dependencies
+        uses: Swatinem/rust-cache@v2
+
       - name: Run clippy
         run: cargo clippy --all-targets -- -D warnings
+
+  secrets:
+    name: Secrets
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      # gitleaks scans the commits, so it needs the whole history.
+      - name: Check out the code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Look for committed secrets
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: false
+
+  build:
+    name: Build
+    needs: [fmt, clippy, secrets]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v5
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache the cargo dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build mys3
+        run: cargo build --release --locked
+
+      # The binary can be downloaded from the run page to try the pull request.
+      - name: Upload the binary
+        uses: actions/upload-artifact@v5
+        with:
+          name: mys3-linux-x86_64
+          path: target/release/mys3
+          retention-days: 7
+
+  test:
+    name: Tests
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v5
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache the cargo dependencies
+        uses: Swatinem/rust-cache@v2
 
       # Same MinIO as on a developer machine; the keys of .env.example are
       # enough for a throwaway server, and the tests read them from .env.

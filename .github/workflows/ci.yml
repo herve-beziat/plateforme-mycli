@@ -1,0 +1,135 @@
+# Continuous integration: on every pull request to `develop` or `main`, and on
+# every push to `develop`, checks the formatting, the lints and the secrets,
+# builds `mys3`, then runs every test, including the ones that need MinIO.
+#
+#   Formatting ─┐
+#   Lints ──────┼──▶ Build ──▶ Tests
+#   Secrets ────┘
+
+name: CI
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop]
+
+# A new push on the same branch cancels the run that is still in progress.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  fmt:
+    name: Formatting
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v7
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Check the formatting
+        run: cargo fmt --check
+
+  clippy:
+    name: Lints
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v7
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Cache the cargo dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run clippy
+        run: cargo clippy --all-targets -- -D warnings
+
+  secrets:
+    name: Secrets
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      # gitleaks scans the commits, so it needs the whole history.
+      - name: Check out the code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Look for committed secrets
+        uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: false
+
+  build:
+    name: Build
+    needs: [fmt, clippy, secrets]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v7
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache the cargo dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Build mys3
+        run: cargo build --release --locked
+
+      # The binary can be downloaded from the run page to try the pull request.
+      - name: Upload the binary
+        uses: actions/upload-artifact@v7
+        with:
+          name: mys3-linux-x86_64
+          path: target/release/mys3
+          retention-days: 7
+
+  test:
+    name: Tests
+    needs: build
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v7
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache the cargo dependencies
+        uses: Swatinem/rust-cache@v2
+
+      # Same MinIO as on a developer machine; the keys of .env.example are
+      # enough for a throwaway server, and the tests read them from .env.
+      - name: Start MinIO
+        run: |
+          cp .env.example .env
+          docker compose up -d
+
+      - name: Wait until MinIO answers
+        run: timeout 60 bash -c 'until curl -sf http://localhost:9000/minio/health/live; do sleep 1; done'
+
+      - name: Run every test
+        run: cargo test -- --include-ignored
+
+      - name: Show the MinIO logs
+        if: failure()
+        run: docker compose logs minio

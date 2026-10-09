@@ -43,7 +43,7 @@ fn move_file_fails_with_nonexistent_alias() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn move_file_fails_when_source_bucket_does_not_exist() {
     let env = TestEnv::with_server();
     let dst_bucket = env.new_bucket();
@@ -61,7 +61,7 @@ fn move_file_fails_when_source_bucket_does_not_exist() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn move_file_fails_when_source_object_does_not_exist() {
     let env = TestEnv::with_server();
     let src_bucket = env.new_bucket();
@@ -83,7 +83,7 @@ fn move_file_fails_when_source_object_does_not_exist() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn move_file_fails_when_destination_bucket_does_not_exist() {
     let env = TestEnv::with_server();
     let src_bucket = env.new_bucket();
@@ -106,7 +106,7 @@ fn move_file_fails_when_destination_bucket_does_not_exist() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn move_file_moves_to_another_bucket_and_deletes_source() {
     let env = TestEnv::with_server();
     let src_bucket = env.new_bucket();
@@ -133,7 +133,7 @@ fn move_file_moves_to_another_bucket_and_deletes_source() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn move_file_renames_within_the_same_bucket() {
     let env = TestEnv::with_server();
     let bucket = env.new_bucket();
@@ -160,7 +160,7 @@ fn move_file_renames_within_the_same_bucket() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn move_file_refuses_existing_destination_without_overwrite() {
     let env = TestEnv::with_server();
     let src_bucket = env.new_bucket();
@@ -192,7 +192,7 @@ fn move_file_refuses_existing_destination_without_overwrite() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn move_file_replaces_existing_destination_with_overwrite() {
     let env = TestEnv::with_server();
     let src_bucket = env.new_bucket();
@@ -222,7 +222,7 @@ fn move_file_replaces_existing_destination_with_overwrite() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn move_file_supports_explicit_alias() {
     let env = TestEnv::with_server();
     let bucket = env.new_bucket();

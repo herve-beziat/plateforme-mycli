@@ -43,7 +43,7 @@ fn copy_file_fails_with_nonexistent_alias() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn copy_file_fails_when_source_bucket_does_not_exist() {
     let env = TestEnv::with_server();
     let dst_bucket = env.new_bucket();
@@ -61,7 +61,7 @@ fn copy_file_fails_when_source_bucket_does_not_exist() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn copy_file_fails_when_source_object_does_not_exist() {
     let env = TestEnv::with_server();
     let src_bucket = env.new_bucket();
@@ -83,7 +83,7 @@ fn copy_file_fails_when_source_object_does_not_exist() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn copy_file_fails_when_destination_bucket_does_not_exist() {
     let env = TestEnv::with_server();
     let src_bucket = env.new_bucket();
@@ -103,7 +103,7 @@ fn copy_file_fails_when_destination_bucket_does_not_exist() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn copy_file_copies_to_another_bucket_with_same_key_by_default() {
     let env = TestEnv::with_server();
     let src_bucket = env.new_bucket();
@@ -136,7 +136,7 @@ fn copy_file_copies_to_another_bucket_with_same_key_by_default() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn copy_file_copies_with_custom_destination_key() {
     let env = TestEnv::with_server();
     let src_bucket = env.new_bucket();
@@ -168,7 +168,7 @@ fn copy_file_copies_with_custom_destination_key() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn copy_file_copies_within_the_same_bucket() {
     let env = TestEnv::with_server();
     let bucket = env.new_bucket();
@@ -193,7 +193,7 @@ fn copy_file_copies_within_the_same_bucket() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn copy_file_refuses_existing_destination_without_overwrite() {
     let env = TestEnv::with_server();
     let src_bucket = env.new_bucket();
@@ -221,7 +221,7 @@ fn copy_file_refuses_existing_destination_without_overwrite() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn copy_file_replaces_existing_destination_with_overwrite() {
     let env = TestEnv::with_server();
     let src_bucket = env.new_bucket();
@@ -248,7 +248,7 @@ fn copy_file_replaces_existing_destination_with_overwrite() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn copy_file_supports_explicit_alias() {
     let env = TestEnv::with_server();
     let bucket = env.new_bucket();

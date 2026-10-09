@@ -43,7 +43,7 @@ fn delete_file_fails_with_nonexistent_alias() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn delete_file_fails_when_bucket_does_not_exist() {
     let env = TestEnv::with_server();
 
@@ -60,7 +60,7 @@ fn delete_file_fails_when_bucket_does_not_exist() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn delete_file_fails_when_object_does_not_exist() {
     let env = TestEnv::with_server();
     let bucket = env.new_bucket();
@@ -76,7 +76,7 @@ fn delete_file_fails_when_object_does_not_exist() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn delete_file_with_force_deletes_without_asking() {
     let env = TestEnv::with_server();
     let bucket = env.new_bucket();
@@ -95,7 +95,7 @@ fn delete_file_with_force_deletes_without_asking() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn delete_file_short_force_flag_works() {
     let env = TestEnv::with_server();
     let bucket = env.new_bucket();
@@ -111,7 +111,7 @@ fn delete_file_short_force_flag_works() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn delete_file_confirms_with_y() {
     let env = TestEnv::with_server();
     let bucket = env.new_bucket();
@@ -130,7 +130,7 @@ fn delete_file_confirms_with_y() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn delete_file_aborts_on_no_or_empty_input() {
     let env = TestEnv::with_server();
     let bucket = env.new_bucket();
@@ -158,7 +158,7 @@ fn delete_file_aborts_on_no_or_empty_input() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn delete_file_supports_explicit_alias() {
     let env = TestEnv::with_server();
     let bucket = env.new_bucket();

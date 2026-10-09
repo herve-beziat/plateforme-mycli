@@ -50,6 +50,8 @@ docker compose up -d
 
 The image comes from `ghcr.io/herve-beziat/minio`. MinIO no longer publishes its Docker images (Docker Hub and quay.io refuse the download), so the project keeps an unchanged copy of the release it uses, `RELEASE.2025-09-07T16-13-09Z`.
 
+On a Mac with Apple Silicon, the image runs through emulation (it is only published for `linux/amd64`). In Docker Desktop, select **Apple Virtualization framework** and enable **Use Rosetta for x86_64/amd64 emulation** (Settings → General), then restart Docker. Without Rosetta, MinIO crashes with `fatal error: lfstack.push`.
+
 To check MinIO container logs or stop the service:
 
 ```bash

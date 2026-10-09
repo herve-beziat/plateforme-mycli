@@ -42,7 +42,7 @@ fn download_file_fails_with_nonexistent_alias() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn download_file_fails_when_bucket_does_not_exist() {
     let env = TestEnv::with_server();
 
@@ -54,7 +54,7 @@ fn download_file_fails_when_bucket_does_not_exist() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn download_file_fails_when_object_does_not_exist() {
     let env = TestEnv::with_server();
     let bucket = env.new_bucket();
@@ -70,7 +70,7 @@ fn download_file_fails_when_object_does_not_exist() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn download_file_saves_to_current_directory_by_default() {
     let env = TestEnv::with_server();
     let bucket = env.new_bucket();
@@ -93,7 +93,7 @@ fn download_file_saves_to_current_directory_by_default() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn download_file_extracts_basename_for_nested_keys() {
     let env = TestEnv::with_server();
     let bucket = env.new_bucket();
@@ -115,7 +115,7 @@ fn download_file_extracts_basename_for_nested_keys() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn download_file_saves_to_explicit_output_path() {
     let env = TestEnv::with_server();
     let bucket = env.new_bucket();
@@ -142,7 +142,7 @@ fn download_file_saves_to_explicit_output_path() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn download_file_refuses_existing_file_without_overwrite() {
     let env = TestEnv::with_server();
     let bucket = env.new_bucket();
@@ -170,7 +170,7 @@ fn download_file_refuses_existing_file_without_overwrite() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn download_file_replaces_existing_file_with_overwrite() {
     let env = TestEnv::with_server();
     let bucket = env.new_bucket();
@@ -197,7 +197,7 @@ fn download_file_replaces_existing_file_with_overwrite() {
 }
 
 #[test]
-#[ignore = "needs MinIO (docker compose up -d) and MYS3_ACCESS_KEY / MYS3_SECRET_KEY"]
+#[ignore = "needs MinIO (docker compose up -d)"]
 fn download_file_supports_explicit_alias() {
     let env = TestEnv::with_server();
     let bucket = env.new_bucket();

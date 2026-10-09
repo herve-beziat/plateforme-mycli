@@ -48,6 +48,8 @@ docker compose up -d
 - **S3 API endpoint**: `http://localhost:9000`
 - **MinIO Web Console**: `http://localhost:9001` (Credentials defined in `.env`: `admin` / `admin12345`)
 
+The image comes from `ghcr.io/herve-beziat/minio`. MinIO no longer publishes its Docker images (Docker Hub and quay.io refuse the download), so the project keeps an unchanged copy of the release it uses, `RELEASE.2025-09-07T16-13-09Z`.
+
 To check MinIO container logs or stop the service:
 
 ```bash

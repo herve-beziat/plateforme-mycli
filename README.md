@@ -396,14 +396,17 @@ A functional test runs the real `mys3` binary and checks its output and its exit
 
 ### Continuous integration
 
-On every pull request to `develop` or `main`, and on every push to `develop`, GitHub Actions runs `.github/workflows/ci.yml`:
+On every pull request to `develop` or `main`, and on every push to `develop`, GitHub Actions runs `.github/workflows/ci.yml`. It is split into five jobs:
 
-1. `cargo fmt --check`
-2. `cargo clippy --all-targets -- -D warnings`
-3. MinIO is started with `docker-compose.yml` and the keys of `.env.example`
-4. `cargo test -- --include-ignored`, so every test runs, including the ones that need MinIO
+| Job | What it does |
+|---|---|
+| Formatting | `cargo fmt --check` |
+| Lints | `cargo clippy --all-targets -- -D warnings` |
+| Secrets | [gitleaks](https://github.com/gitleaks/gitleaks) looks for keys, tokens or passwords in the commits |
+| Build | `cargo build --release --locked`, then uploads the `mys3` binary as an artifact of the run (kept 7 days) |
+| Tests | Starts MinIO with `docker-compose.yml` and the keys of `.env.example`, then runs `cargo test -- --include-ignored` |
 
-The result appears in the checks of the pull request. Run the same commands locally before pushing to avoid a red CI.
+The first three jobs run in parallel. Build starts when they all pass, and Tests when Build passes. The result appears in the checks of the pull request. Run the same commands locally before pushing to avoid a red CI.
 
 For contribution rules, branch conventions, and PR workflow, see [CONTRIBUTING.md](CONTRIBUTING.md).
 

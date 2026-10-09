@@ -72,6 +72,9 @@ pub enum MyS3Error {
     #[error("local file '{0}' not found")]
     LocalFileNotFound(String),
 
+    #[error("cannot read local file '{0}': {1}")]
+    LocalFileRead(String, std::io::Error),
+
     /// Overwrite protection on the local side (`download-file`).
     #[error("local file '{0}' already exists (use --overwrite to replace it)")]
     LocalFileAlreadyExists(String),

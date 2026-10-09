@@ -14,6 +14,18 @@ fn test_unknown_alias_is_refused() {
         .stderr(contains("alias 'nope' not found"));
 }
 
+/// The name is checked before the configuration is read: no alias is needed.
+#[test]
+fn test_invalid_name_is_refused_before_any_request() {
+    TestEnv::new()
+        .cmd()
+        .args(["delete-bucket", "Bad_Name"])
+        .assert()
+        .code(1)
+        .stderr(contains("invalid bucket name 'Bad_Name'"))
+        .stderr(contains("[y/N]").not());
+}
+
 #[test]
 #[ignore = "needs MinIO"]
 fn test_force_deletes_an_empty_bucket() {

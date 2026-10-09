@@ -1,6 +1,7 @@
 //! `mys3 delete-bucket`: delete a bucket.
 
 use crate::client::S3Client;
+use crate::commands::create_bucket::validate_bucket_name;
 use crate::commands::list_objects::parse_objects_xml;
 use crate::error::MyS3Error;
 use crate::prompt;
@@ -98,6 +99,9 @@ pub fn delete_bucket(client: &S3Client, bucket: &str) -> Result<(), MyS3Error> {
 
 /// Runs the `delete-bucket` command.
 pub fn run(args: Args) -> Result<(), MyS3Error> {
+    // An invalid name gets a 400 without body from the server: refuse it first.
+    validate_bucket_name(&args.bucket_name)?;
+
     let client = S3Client::connect(args.alias.as_deref())?;
     let bucket = &args.bucket_name;
 

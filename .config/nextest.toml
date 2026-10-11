@@ -1,0 +1,10 @@
+# Settings of cargo-nextest, the test runner used by the CI to write a JUnit
+# test report. Locally, `cargo test` is enough.
+
+[profile.ci]
+# Run every test even after a failure, so the report lists all of them.
+fail-fast = false
+
+[profile.ci.junit]
+# Written to target/nextest/ci/junit.xml.
+path = "junit.xml"

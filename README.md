@@ -72,6 +72,21 @@ cargo build --release
 
 The compiled binary is located at `target/release/mys3`. You can also execute it via `cargo run -- <command>` during development.
 
+### Or download a release (Linux x86_64)
+
+Each [GitHub release](https://github.com/herve-beziat/plateforme-mycli/releases) comes with a ready-to-use binary, `mys3-linux-x86_64`, and its SHA-256 checksum, so no Rust toolchain is needed:
+
+```bash
+BASE=https://github.com/herve-beziat/plateforme-mycli/releases/download/v1.0.0
+curl -LO "$BASE/mys3-linux-x86_64"
+curl -LO "$BASE/mys3-linux-x86_64.sha256"
+
+# Check the download, then make the file executable
+sha256sum -c mys3-linux-x86_64.sha256
+chmod +x mys3-linux-x86_64
+./mys3-linux-x86_64 --help
+```
+
 ---
 
 ## Alias Workflow
@@ -421,6 +436,10 @@ On every pull request to `develop` or `main`, and on every push to `develop`, Gi
 The first three jobs run in parallel. Build starts when they all pass, and Tests when Build passes. The result appears in the checks of the pull request. Run the same commands locally before pushing to avoid a red CI.
 
 The test report appears in the summary of the run: passed, failed and skipped tests, grouped by test file, with the failures annotated. The JUnit file is also uploaded as an artifact of the run (`junit-report`). Locally, `cargo test -- --include-ignored` runs the same tests: nextest is only needed for the JUnit report.
+
+Publishing a GitHub release runs `.github/workflows/release.yml`. It checks that the tag (e.g. `v1.0.0`) matches the version of `Cargo.toml`, builds `mys3` with `cargo build --release --locked`, then attaches `mys3-linux-x86_64` and `mys3-linux-x86_64.sha256` to the release. It is the only workflow allowed to write to the repository (`contents: write`).
+
+To publish a release: bump the version in `Cargo.toml`, merge `develop` into `main`, then run `gh release create vX.Y.Z --target main --title "mys3 vX.Y.Z" --notes-file <notes.md>`.
 
 For contribution rules, branch conventions, and PR workflow, see [CONTRIBUTING.md](CONTRIBUTING.md).
 

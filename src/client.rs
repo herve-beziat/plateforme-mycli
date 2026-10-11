@@ -1,0 +1,267 @@
+//! HTTP client: sends requests signed with SigV4 to the server of an alias.
+//!
+//! Path-style addressing only: the bucket is the first segment of the path
+//! (`http://host:port/<bucket>/<key>`).
+
+use chrono::Utc;
+use sha2::{Digest, Sha256};
+use ureq::Agent;
+use ureq::http::{self, Uri};
+
+use crate::config::{Config, Credentials, ResolvedAlias};
+use crate::error::MyS3Error;
+use crate::signer;
+
+/// A client bound to one alias.
+pub struct S3Client {
+    agent: Agent,
+    /// `scheme://host[:port]`, without a trailing slash.
+    base_url: String,
+    /// `host[:port]`, without the default port of the scheme: the value of the
+    /// `Host` header, which is signed.
+    host: String,
+    alias: ResolvedAlias,
+}
+
+/// Answer of the server. Every status is returned except `403`, which is
+/// turned into `MyS3Error::AuthenticationRefused`.
+#[derive(Debug)]
+pub struct Response {
+    pub status: u16,
+    pub headers: Vec<(String, String)>,
+    pub body: Vec<u8>,
+}
+
+impl Response {
+    /// Code of an S3 XML error body (`<Code>NoSuchBucket</Code>`), if any.
+    pub fn error_code(&self) -> Option<String> {
+        let body = String::from_utf8_lossy(&self.body);
+        let start = body.find("<Code>")? + "<Code>".len();
+        let end = start + body[start..].find("</Code>")?;
+        Some(body[start..end].to_string())
+    }
+}
+
+impl S3Client {
+    /// Client for `alias` (`--alias`, otherwise the default alias), with the
+    /// keys of `MYS3_ACCESS_KEY` / `MYS3_SECRET_KEY` taking priority over the file.
+    pub fn connect(alias: Option<&str>) -> Result<Self, MyS3Error> {
+        let alias =
+            Config::load()?.resolve(alias, Credentials::default(), Credentials::from_env())?;
+        Self::new(alias)
+    }
+
+    /// Region of the alias.
+    pub fn region(&self) -> &str {
+        &self.alias.region
+    }
+
+    /// Checks the URL of the alias (`http://` or `https://`, no path) and
+    /// prepares the client.
+    pub fn new(alias: ResolvedAlias) -> Result<Self, MyS3Error> {
+        let invalid = || MyS3Error::InvalidUrl(alias.url.clone());
+
+        let uri: Uri = alias.url.parse().map_err(|_| invalid())?;
+        let (scheme, default_port) = match uri.scheme_str() {
+            Some("http") => ("http", 80),
+            Some("https") => ("https", 443),
+            _ => return Err(invalid()),
+        };
+        let host = uri.host().ok_or_else(invalid)?;
+        if !matches!(uri.path(), "" | "/") || uri.query().is_some() {
+            return Err(invalid());
+        }
+        // Same rule as the `Host` header sent by ureq, otherwise the signature does not match.
+        let host = match uri.port_u16() {
+            Some(port) if port != default_port => format!("{host}:{port}"),
+            _ => host.to_string(),
+        };
+
+        let agent = Agent::config_builder()
+            .http_status_as_error(false)
+            .build()
+            .into();
+
+        Ok(Self {
+            agent,
+            base_url: format!("{scheme}://{host}"),
+            host,
+            alias,
+        })
+    }
+
+    /// Signs and sends a request. `path` and `query` are not URI-encoded.
+    pub fn send(
+        &self,
+        method: &str,
+        path: &str,
+        query: &[(&str, &str)],
+        headers: Vec<(String, String)>,
+        body: Vec<u8>,
+    ) -> Result<Response, MyS3Error> {
+        let mut request = signer::Request {
+            method: method.to_string(),
+            host: self.host.clone(),
+            path: path.to_string(),
+            query: query
+                .iter()
+                .map(|(name, value)| (name.to_string(), value.to_string()))
+                .collect(),
+            headers,
+            payload_hash: hex::encode(Sha256::digest(&body)),
+        };
+        signer::sign(
+            &mut request,
+            &self.alias.access_key,
+            &self.alias.secret_key,
+            &self.alias.region,
+            Utc::now(),
+        );
+
+        let url = self.url(path, query);
+        let mut builder = http::Request::builder().method(method).uri(&url);
+        for (name, value) in &request.headers {
+            builder = builder.header(name, value);
+        }
+        let invalid = |_| MyS3Error::InvalidUrl(url.clone());
+        // ureq refuses a body on GET, HEAD and DELETE, even an empty one. On PUT
+        // and POST an empty body is still sent, as `Content-Length: 0`: without
+        // it ureq sends a chunked request, which MinIO refuses when creating a
+        // bucket (`400 MalformedXML`).
+        let without_body = body.is_empty() && !matches!(method, "PUT" | "POST");
+        let result = if without_body {
+            self.agent.run(builder.body(()).map_err(invalid)?)
+        } else {
+            self.agent.run(builder.body(body).map_err(invalid)?)
+        };
+        let unreachable = |_| MyS3Error::ServerUnreachable(self.base_url.clone());
+        let mut response = result.map_err(unreachable)?;
+
+        let status = response.status().as_u16();
+        if status == 403 {
+            return Err(MyS3Error::AuthenticationRefused);
+        }
+        let headers = response
+            .headers()
+            .iter()
+            .map(|(name, value)| {
+                let value = value.to_str().unwrap_or_default();
+                (name.to_string(), value.to_string())
+            })
+            .collect();
+        // `with_config` reads without the 10 MB limit of `read_to_vec`.
+        let body = response
+            .body_mut()
+            .with_config()
+            .read_to_vec()
+            .map_err(unreachable)?;
+
+        Ok(Response {
+            status,
+            headers,
+            body,
+        })
+    }
+
+    /// URL sent to the server, encoded exactly as in the signed canonical request.
+    fn url(&self, path: &str, query: &[(&str, &str)]) -> String {
+        let mut url = format!("{}{}", self.base_url, signer::uri_encode(path, false));
+        if !query.is_empty() {
+            let query = query
+                .iter()
+                .map(|(name, value)| {
+                    format!(
+                        "{}={}",
+                        signer::uri_encode(name, true),
+                        signer::uri_encode(value, true)
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join("&");
+            url.push('?');
+            url.push_str(&query);
+        }
+        url
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn alias(url: &str) -> ResolvedAlias {
+        ResolvedAlias {
+            name: "test".to_string(),
+            url: url.to_string(),
+            access_key: "access".to_string(),
+            secret_key: "secret".to_string(),
+            region: "us-east-1".to_string(),
+        }
+    }
+
+    fn client(url: &str) -> S3Client {
+        S3Client::new(alias(url)).unwrap()
+    }
+
+    #[test]
+    fn host_keeps_a_non_default_port() {
+        let client = client("http://localhost:9000");
+        assert_eq!(client.host, "localhost:9000");
+        assert_eq!(client.base_url, "http://localhost:9000");
+    }
+
+    #[test]
+    fn host_drops_the_default_port() {
+        assert_eq!(client("http://example.com:80").host, "example.com");
+        assert_eq!(client("https://s3.example.com:443").host, "s3.example.com");
+        assert_eq!(client("https://s3.example.com/").host, "s3.example.com");
+    }
+
+    #[test]
+    fn invalid_urls_are_refused() {
+        for url in [
+            "localhost:9000",
+            "ftp://localhost:9000",
+            "http://localhost:9000/bucket",
+            "not a url",
+        ] {
+            assert!(
+                matches!(S3Client::new(alias(url)), Err(MyS3Error::InvalidUrl(_))),
+                "{url} should be refused"
+            );
+        }
+    }
+
+    #[test]
+    fn url_is_encoded_like_the_signed_request() {
+        let client = client("http://localhost:9000");
+        assert_eq!(
+            client.url(
+                "/my-bucket/dir/my file.txt",
+                &[("prefix", "a b"), ("list-type", "2")]
+            ),
+            "http://localhost:9000/my-bucket/dir/my%20file.txt?prefix=a%20b&list-type=2"
+        );
+    }
+
+    fn response(body: &str) -> Response {
+        Response {
+            status: 404,
+            headers: Vec::new(),
+            body: body.as_bytes().to_vec(),
+        }
+    }
+
+    #[test]
+    fn error_code_is_read_from_the_xml_body() {
+        let body = r#"<?xml version="1.0" encoding="UTF-8"?>
+<Error><Code>NoSuchBucket</Code><Message>The specified bucket does not exist</Message></Error>"#;
+        assert_eq!(response(body).error_code().as_deref(), Some("NoSuchBucket"));
+    }
+
+    #[test]
+    fn error_code_is_none_without_xml_error() {
+        assert_eq!(response("").error_code(), None);
+        assert_eq!(response("<Code>unterminated").error_code(), None);
+    }
+}

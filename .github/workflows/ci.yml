@@ -1,6 +1,7 @@
 # Continuous integration: on every pull request to `develop` or `main`, and on
 # every push to `develop`, checks the formatting, the lints and the secrets,
-# builds `mys3`, then runs every test, including the ones that need MinIO.
+# builds `mys3`, then runs every test, including the ones that need MinIO,
+# and shows the test report in the summary of the run.
 #
 #   Formatting ─┐
 #   Lints ──────┼──▶ Build ──▶ Tests
@@ -127,8 +128,34 @@ jobs:
       - name: Wait until MinIO answers
         run: timeout 60 bash -c 'until curl -sf http://localhost:9000/minio/health/live; do sleep 1; done'
 
+      # nextest runs the same tests as `cargo test` and writes a JUnit report
+      # (settings in .config/nextest.toml).
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: nextest
+
       - name: Run every test
-        run: cargo test -- --include-ignored
+        run: cargo nextest run --profile ci --run-ignored all
+
+      # The report is shown in the summary of the run, even when a test fails.
+      - name: Show the test report
+        if: ${{ !cancelled() }}
+        uses: mikepenz/action-junit-report@v6
+        with:
+          report_paths: target/nextest/ci/junit.xml
+          annotate_only: true
+          detailed_summary: true
+          group_suite: true
+          include_passed: true
+
+      - name: Upload the test report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: junit-report
+          path: target/nextest/ci/junit.xml
+          retention-days: 7
 
       - name: Show the MinIO logs
         if: failure()

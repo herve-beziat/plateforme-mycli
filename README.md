@@ -193,6 +193,16 @@ Displays the details of a bucket: name, creation date, object count and total si
   ```bash
   mys3 bucket-info my-bucket
   ```
+- **Output**:
+  ```
+  Name:          my-bucket
+  Creation date: 2026-10-09T12:22:47.702Z
+  Objects:       2
+  Total size:    1029 bytes (1.0 KiB)
+  ```
+  With `--output JSON`, the keys are `name`, `creation_date`, `object_count` and `total_size` (in bytes).
+- **Errors**: the command fails (exit code `1`) if the bucket does not exist.
+- **Note**: the objects are listed page by page (1000 per request), so the totals are exact whatever the number of objects.
 
 #### `delete-bucket`
 Deletes a bucket, after a confirmation. A bucket that still contains objects is refused unless `--recursive` is given.

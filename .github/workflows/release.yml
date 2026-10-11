@@ -1,0 +1,56 @@
+# Release: when a GitHub release is published (with a tag such as v1.0.0),
+# checks that the tag matches the version of Cargo.toml, builds mys3 for
+# Linux and attaches the binary and its SHA-256 checksum to the release.
+
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  binary:
+    name: Linux binary
+    runs-on: ubuntu-24.04
+    # Needed to attach files to the release; the CI keeps a read-only token.
+    permissions:
+      contents: write
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v7
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      # A v1.0.0 release must not ship a binary built from another version.
+      - name: Check that the tag matches Cargo.toml
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          version=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[0].version')
+          if [ "$TAG" != "v$version" ]; then
+            echo "::error::Tag $TAG does not match version $version of Cargo.toml"
+            exit 1
+          fi
+
+      - name: Build mys3
+        run: cargo build --release --locked
+
+      # The checksum lets a user check the downloaded file with sha256sum -c.
+      - name: Prepare the files
+        run: |
+          cp target/release/mys3 mys3-linux-x86_64
+          sha256sum mys3-linux-x86_64 > mys3-linux-x86_64.sha256
+
+      # --clobber replaces the files if the job is run again.
+      - name: Attach the files to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$TAG" mys3-linux-x86_64 mys3-linux-x86_64.sha256 --clobber

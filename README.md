@@ -416,9 +416,11 @@ On every pull request to `develop` or `main`, and on every push to `develop`, Gi
 | Lints | `cargo clippy --all-targets -- -D warnings` |
 | Secrets | [gitleaks](https://github.com/gitleaks/gitleaks) looks for keys, tokens or passwords in the commits |
 | Build | `cargo build --release --locked`, then uploads the `mys3` binary as an artifact of the run (kept 7 days) |
-| Tests | Starts MinIO with `docker-compose.yml` and the keys of `.env.example`, then runs `cargo test -- --include-ignored` |
+| Tests | Starts MinIO with `docker-compose.yml` and the keys of `.env.example`, runs every test with [cargo-nextest](https://nexte.st) (`cargo nextest run --profile ci --run-ignored all`), then shows the test report |
 
 The first three jobs run in parallel. Build starts when they all pass, and Tests when Build passes. The result appears in the checks of the pull request. Run the same commands locally before pushing to avoid a red CI.
+
+The test report appears in the summary of the run: passed, failed and skipped tests, grouped by test file, with the failures annotated. The JUnit file is also uploaded as an artifact of the run (`junit-report`). Locally, `cargo test -- --include-ignored` runs the same tests: nextest is only needed for the JUnit report.
 
 For contribution rules, branch conventions, and PR workflow, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
